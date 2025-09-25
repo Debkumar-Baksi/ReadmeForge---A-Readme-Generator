@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReadmeForge</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.3.1/styles/github.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .container {
+            max-width: 1200px;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.9);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 25px;
+            padding: 10px 30px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .form-control {
+            border-radius: 10px;
+            border: 2px solid #e1e5e9;
+            padding: 12px 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        
+        .readme-output {
+            background: #f8f9fa;
+            border-radius: 10px;
+            max-height: 600px;
+            overflow-y: auto;
+            border: 2px solid #e1e5e9;
+        }
+        
+        .loading {
+            display: none;
+        }
+        
+        .spinner-border {
+            color: #667eea;
+        }
+        
+        .repo-info {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #667eea;
+            border: none;
+            color: white;
+            border-radius: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .copy-btn:hover {
+            background: #764ba2;
+        }
+        
+        .hero-section {
+            text-align: center;
+            color: white;
+            padding: 40px 0;
+        }
+        
+        .hero-title {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .hero-subtitle {
+            font-size: 1.2rem;
+            margin-bottom: 40px;
+            opacity: 0.9;
+        }
+        
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2rem;
+            }
+            .hero-subtitle {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <!-- Hero Section -->
+        <div class="hero-section">
+            <h1 class="hero-title">✨ ReadmeForge</h1>
+            <p class="hero-subtitle">Generate professional README files for your GitHub repositories using AI</p>
+        </div>
+
+        <!-- Main Form -->
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card">
+                    <div class="card-body p-5">
+                        <form id="readmeForm">
+                            <div class="mb-4">
+                                <label for="repoUrl" class="form-label h5">GitHub Repository URL</label>
+                                <input type="url" class="form-control form-control-lg" id="repoUrl" 
+                                       placeholder="https://github.com/username/repository" required>
+                                <div class="form-text">Enter the public GitHub repository URL you want to generate a README for</div>
+                            </div>
+                            
+                            <div class="text-center">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <span class="submit-text">🚀 Generate README</span>
+                                    <span class="loading">
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                        Generating...
+                                    </span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="row justify-content-center mt-5" style="display: none;">
+            <div class="col-lg-10">
+                <!-- Repository Info -->
+                <div id="repoInfo" class="repo-info"></div>
+                
+                <!-- README Output -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">📝 Generated README.md</h5>
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary me-2" id="downloadBtn">
+                                📥 Download
+                            </button>
+                            <button class="btn btn-sm btn-primary" id="copyBtn">
+                                📋 Copy to Clipboard
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0" style="position: relative;">
+                        <div id="readmeOutput" class="readme-output p-4"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Alert -->
+        <div id="errorAlert" class="alert alert-danger mt-4" role="alert" style="display: none;">
+            <strong>Error:</strong> <span id="errorMessage"></span>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.3.1/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.0.2/marked.min.js"></script>
+    
+    <script>
+        let generatedReadme = '';
+        
+        document.getElementById('readmeForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const repoUrl = document.getElementById('repoUrl').value;
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const submitText = submitBtn.querySelector('.submit-text');
+            const loadingText = submitBtn.querySelector('.loading');
+            const errorAlert = document.getElementById('errorAlert');
+            const resultsSection = document.getElementById('resultsSection');
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            submitText.style.display = 'none';
+            loadingText.style.display = 'inline-block';
+            errorAlert.style.display = 'none';
+            resultsSection.style.display = 'none';
+            
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ repo_url: repoUrl })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    generatedReadme = data.readme;
+                    displayResults(data.readme, data.repo_info);
+                } else {
+                    showError(data.error || 'An error occurred while generating the README');
+                }
+                
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            } finally {
+                // Reset loading state
+                submitBtn.disabled = false;
+                submitText.style.display = 'inline-block';
+                loadingText.style.display = 'none';
+            }
+        });
+        
+        function displayResults(readme, repoInfo) {
+            // Display repository info
+            const repoInfoDiv = document.getElementById('repoInfo');
+            repoInfoDiv.innerHTML = `
+                <h4>📁 ${repoInfo.name}</h4>
+                <p>${repoInfo.description || 'No description available'}</p>
+                <div class="row">
+                    <div class="col-md-3">
+                        <strong>Language:</strong> ${repoInfo.language || 'N/A'}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Stars:</strong> ⭐ ${repoInfo.stars || 0}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Forks:</strong> 🍴 ${repoInfo.forks || 0}
+                    </div>
+                </div>
+            `;
+            
+            // Display README
+            const readmeOutput = document.getElementById('readmeOutput');
+            readmeOutput.innerHTML = marked.parse(readme);
+            
+            // Highlight code blocks
+            readmeOutput.querySelectorAll('pre code').forEach((block) => {
+                hljs.highlightElement(block);
+            });
+            
+            // Show results
+            document.getElementById('resultsSection').style.display = 'block';
+            
+            // Scroll to results
+            document.getElementById('resultsSection').scrollIntoView({ 
+                behavior: 'smooth' 
+            });
+        }
+        
+        function showError(message) {
+            const errorAlert = document.getElementById('errorAlert');
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = message;
+            errorAlert.style.display = 'block';
+            
+            // Scroll to error
+            errorAlert.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Copy to clipboard functionality
+        document.getElementById('copyBtn').addEventListener('click', async function() {
+            try {
+                await navigator.clipboard.writeText(generatedReadme);
+                this.innerHTML = '✅ Copied!';
+                setTimeout(() => {
+                    this.innerHTML = '📋 Copy to Clipboard';
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy: ', err);
+            }
+        });
+        
+        // Download functionality
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+            const blob = new Blob([generatedReadme], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'README.md';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    </script>
+</body>
+</html>

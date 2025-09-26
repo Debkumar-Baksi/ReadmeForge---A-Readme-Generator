@@ -6,71 +6,60 @@ from urllib.parse import urlparse
 import base64
 import json
 import secrets
+
+from flask import Flask, request, jsonify, render_template
+import google.generativeai as genai
+import os
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
+# Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
-# Use environment variable for secret key, fallback to generated one
-app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))
 
-# Configure Gemini API using environment variable
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
+# Configure Gemini API
+genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
+model = genai.GenerativeModel('gemini-pro')
 
-if not GEMINI_API_KEY:
-    raise ValueError("GEMINI_API_KEY environment variable is required")
+@app.route('/', methods=['GET'])
+def index():
+    return render_template('index.html')
 
-genai.configure(api_key=GEMINI_API_KEY)
-model= genai.GenerativeModel('gemini-2.5-flash')
+@app.route('/api/index', methods=['POST'])
+def api_generate_readme():
+    try:
+        repo_url = request.json.get('repo_url')
+        if not repo_url:
+            return jsonify({'success': False, 'error': 'Repository URL is required'}), 400
+        if 'github.com' not in repo_url:
+            return jsonify({'success': False, 'error': 'Please provide a valid GitHub repository URL'}), 400
 
-class GitHubRepoAnalyzer:
-    def __init__(self, repo_url):
-        self.repo_url = repo_url
-        self.owner, self.repo = self.parse_github_url(repo_url)
-        self.api_base = "https://api.github.com"
-    
-    def parse_github_url(self, url):
-        """Parse GitHub URL to extract owner and repo name"""
-        parsed = urlparse(url)
-        path_parts = parsed.path.strip('/').split('/')
-        if len(path_parts) >= 2:
-            return path_parts[0], path_parts[1]
-        raise ValueError("Invalid GitHub URL")
-    
-    def get_repo_info(self):
-        """Get basic repository information"""
-        url = f"{self.api_base}/repos/{self.owner}/{self.repo}"
-        response = requests.get(url)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            raise Exception(f"Failed to fetch repo info: {response.status_code}")
-    
-    def get_file_tree(self):
-        """Get repository file structure"""
-        url = f"{self.api_base}/repos/{self.owner}/{self.repo}/git/trees/main?recursive=1"
-        response = requests.get(url)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            # Try with 'master' branch if 'main' doesn't exist
-            url = f"{self.api_base}/repos/{self.owner}/{self.repo}/git/trees/master?recursive=1"
-            response = requests.get(url)
-            if response.status_code == 200:
-                return response.json()
-            else:
-                raise Exception(f"Failed to fetch file tree: {response.status_code}")
-    
-    def get_file_content(self, file_path):
-        """Get content of a specific file"""
-        url = f"{self.api_base}/repos/{self.owner}/{self.repo}/contents/{file_path}"
-        response = requests.get(url)
-        if response.status_code == 200:
-            data = response.json()
-            if 'content' in data:
-                return base64.b64decode(data['content']).decode('utf-8', errors='ignore')
-        return None
+        repo_name = repo_url.rstrip('/').split('/')[-1]
+        prompt = f"""Generate a professional README.md for a GitHub repository named {repo_name}.\nURL: {repo_url}\n\nInclude these sections:\n1. Project Title and Description\n2. Features\n3. Installation Guide\n4. Usage Instructions\n5. Contributing Guidelines\n6. License Information\n\nFormat it in clean Markdown without any code block markers or explanatory text.\nMake it professional and comprehensive."""
+
+        response = model.generate_content(prompt)
+        readme_content = response.text.strip()
+        if readme_content.startswith('```'):
+            readme_content = readme_content.split('```')[1]
+        if readme_content.endswith('```'):
+            readme_content = readme_content.rsplit('```', 1)[0]
+
+        return jsonify({
+            'success': True,
+            'readme': readme_content,
+            'repo_info': {
+                'name': repo_name,
+                'description': 'Generated README',
+                'language': 'N/A',
+                'stars': 0,
+                'forks': 0
+            }
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': f"Failed to generate README: {str(e)}"}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
     
     def get_important_files(self):
         """Get content of important files for analysis"""

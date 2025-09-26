@@ -1,34 +1,28 @@
 import os
 import requests
 import google.generativeai as genai
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session
 from urllib.parse import urlparse
 import base64
 import json
 import secrets
+from dotenv import load_dotenv
 
-# Initialize Flask app
+# Load environment variables from .env file
+load_dotenv()
+
 app = Flask(__name__)
+# Use environment variable for secret key, fallback to generated one
+app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))
 
-# Configure for serverless environment
-try:
-    # Load environment variables
-    GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
-    SECRET_KEY = os.environ.get('SECRET_KEY', secrets.token_hex(16))
-    
-    if not GEMINI_API_KEY:
-        print("Warning: GEMINI_API_KEY not found in environment variables")
-        GEMINI_API_KEY = "dummy_key"  # Fallback for testing
-    
-    app.secret_key = SECRET_KEY
-    
-    # Configure Gemini API
-    genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel('gemini-pro')
-    
-except Exception as e:
-    print(f"Initialization error: {str(e)}")
-    model = None
+# Configure Gemini API using environment variable
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
+
+if not GEMINI_API_KEY:
+    raise ValueError("GEMINI_API_KEY environment variable is required")
+
+genai.configure(api_key=GEMINI_API_KEY)
+model = genai.GenerativeModel('gemini-2.5-flash')
 
 class GitHubRepoAnalyzer:
     def __init__(self, repo_url):
@@ -126,10 +120,6 @@ class ReadmeGenerator:
     def generate_readme(self, repo_info, file_contents):
         """Generate README content using Gemini"""
         
-        # Check if model is available
-        if not model:
-            return "Error: Gemini API not configured properly"
-        
         # Create a comprehensive prompt
         prompt = f"""
 Based on the following GitHub repository information, generate a comprehensive and professional README.md file:
@@ -146,7 +136,7 @@ Based on the following GitHub repository information, generate a comprehensive a
 """
         
         for file_path, content in file_contents.items():
-            prompt += f"\n**{file_path}:**\n```\n{content[:800]}...\n```\n"
+            prompt += f"\n**{file_path}:**\n```\n{content[:1000]}...\n```\n"
         
         prompt += """
 
@@ -203,11 +193,7 @@ def index():
 @app.route('/generate', methods=['POST'])
 def generate_readme():
     try:
-        data = request.get_json()
-        if not data:
-            return jsonify({'error': 'No JSON data received'}), 400
-            
-        repo_url = data.get('repo_url')
+        repo_url = request.json.get('repo_url')
         
         if not repo_url:
             return jsonify({'error': 'Repository URL is required'}), 400
@@ -215,10 +201,6 @@ def generate_readme():
         # Validate GitHub URL
         if 'github.com' not in repo_url:
             return jsonify({'error': 'Please provide a valid GitHub repository URL'}), 400
-        
-        # Check if API is configured
-        if not GEMINI_API_KEY or GEMINI_API_KEY == "dummy_key":
-            return jsonify({'error': 'Gemini API not configured. Please set GEMINI_API_KEY environment variable.'}), 500
         
         # Analyze repository
         analyzer = GitHubRepoAnalyzer(repo_url)
@@ -242,24 +224,10 @@ def generate_readme():
         })
         
     except Exception as e:
-        print(f"Error in generate_readme: {str(e)}")  # For debugging
-        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+        return jsonify({'error': str(e)}), 500
 
-# Health check endpoint
-@app.route('/health')
-def health_check():
-    return jsonify({
-        'status': 'healthy',
-        'gemini_configured': bool(GEMINI_API_KEY and GEMINI_API_KEY != "dummy_key")
-    })
-
-# For Vercel serverless deployment - this is crucial
+# For Vercel deployment
 app = app
 
-# WSGI handler for Vercel
-def handler(environ, start_response):
-    return app(environ, start_response)
-
-# For local development
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    app.run(debug=True)

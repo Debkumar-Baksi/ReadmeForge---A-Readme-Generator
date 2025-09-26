@@ -222,16 +222,28 @@
                     },
                     body: JSON.stringify({ repo_url: repoUrl })
                 });
-                
-                const data = await response.json();
-                
+
+                let data;
+                if (response.ok) {
+                    data = await response.json();
+                } else {
+                    // Try to parse error JSON, fallback to text
+                    try {
+                        data = await response.json();
+                        showError(data.error || 'Server error: ' + response.status);
+                    } catch {
+                        const text = await response.text();
+                        showError('Server error: ' + response.status + (text ? ' - ' + text : ''));
+                    }
+                    return;
+                }
+
                 if (data.success) {
                     generatedReadme = data.readme;
                     displayResults(data.readme, data.repo_info);
                 } else {
                     showError(data.error || 'An error occurred while generating the README');
                 }
-                
             } catch (error) {
                 showError('Network error: ' + error.message);
             } finally {

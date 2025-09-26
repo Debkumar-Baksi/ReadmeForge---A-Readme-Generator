@@ -227,14 +227,15 @@
                 if (response.ok) {
                     data = await response.json();
                 } else {
-                    // Try to parse error JSON, fallback to text
+                    // Try to parse error JSON only once
+                    let errorMsg = 'Server error: ' + response.status;
                     try {
-                        data = await response.json();
-                        showError(data.error || 'Server error: ' + response.status);
+                        const errorData = await response.json();
+                        errorMsg = errorData.error ? errorData.error : errorMsg;
                     } catch {
-                        const text = await response.text();
-                        showError('Server error: ' + response.status + (text ? ' - ' + text : ''));
+                        // If JSON parsing fails, keep generic error
                     }
+                    showError(errorMsg);
                     return;
                 }
 

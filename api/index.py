@@ -1,5 +1,7 @@
+
 import sys
-sys.path.append('..')  # So we can import app.py
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app import app as application
 
 # Vercel will use this as the entry point for the Python serverless function

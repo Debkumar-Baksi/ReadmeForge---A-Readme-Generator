@@ -186,31 +186,26 @@ Output should be pure Markdown that can be directly saved as README.md file.
         except Exception as e:
             return f"Error generating README: {str(e)}"
 
-@app.route('/')
+
+# Serve frontend for GET requests (for Vercel static hosting)
+@app.route('/', methods=['GET'])
 def index():
     return render_template('index.html')
 
-@app.route('/generate', methods=['POST'])
-def generate_readme():
+# Vercel expects API at /api/index (POST)
+@app.route('/api/index', methods=['POST'])
+def api_generate_readme():
     try:
         repo_url = request.json.get('repo_url')
-        
         if not repo_url:
-            return jsonify({'error': 'Repository URL is required'}), 400
-        
-        # Validate GitHub URL
+            return jsonify({'success': False, 'error': 'Repository URL is required'}), 400
         if 'github.com' not in repo_url:
-            return jsonify({'error': 'Please provide a valid GitHub repository URL'}), 400
-        
-        # Analyze repository
+            return jsonify({'success': False, 'error': 'Please provide a valid GitHub repository URL'}), 400
         analyzer = GitHubRepoAnalyzer(repo_url)
         repo_info = analyzer.get_repo_info()
         file_contents = analyzer.get_important_files()
-        
-        # Generate README
         generator = ReadmeGenerator()
         readme_content = generator.generate_readme(repo_info, file_contents)
-        
         return jsonify({
             'success': True,
             'readme': readme_content,
@@ -222,9 +217,9 @@ def generate_readme():
                 'forks': repo_info.get('forks_count')
             }
         })
-        
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        # Always return JSON error
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 # For Vercel deployment
 app = app

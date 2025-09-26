@@ -22,7 +22,7 @@ if not GEMINI_API_KEY:
     raise ValueError("GEMINI_API_KEY environment variable is required")
 
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-2.5-flash')
+model= genai.GenerativeModel('gemini-2.5-flash')
 
 class GitHubRepoAnalyzer:
     def __init__(self, repo_url):
